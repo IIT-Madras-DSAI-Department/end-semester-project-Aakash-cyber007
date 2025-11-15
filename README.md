@@ -36,7 +36,17 @@ All experiments should be runnable from the command line **and** reproducible in
 
 * Mention the instructions to run you .py files.
   
----
+### Requirements
+- Python 3.8+
+- numpy
+- pandas
+- matplotlib (optional, for generating plots)
+- counter from collections 
+
+### Dataset
+Place the following CSV files in the same directory as main.py:
+- MNIST_train.csv
+- MNIST_validation.csv
 
 ## You can further add your own sections/titles along with corresponding contents here:
 
