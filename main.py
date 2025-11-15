@@ -49,11 +49,17 @@ if __name__ == "__main__":
     print("Predicting on validation set...")
     predictions = model.predict(x_val, epsilon=0.4)
 
-    print("Evaluating F1 score...")
+    print("Evaluating F1 score and Accuracy score ...")
     f1 = f1_score_macro(y_val, predictions)
+    accuracy = np.mean(y_val == predictions)
+    print("Accuracy Score:", accuracy)
 
     print(f"\nFinal Macro F1 Score: {f1:.4f}")
     print(f"Total Runtime: {time.time() - start_time:.2f} seconds")
+    
+    
+
+
 
 
 
