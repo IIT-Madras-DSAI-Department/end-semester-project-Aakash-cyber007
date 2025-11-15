@@ -1,6 +1,75 @@
 import pandas as pd
 import numpy as np
 from collections import Counter
+
+class PCA:
+    def __init__(self, n_components):
+        self.n_components = n_components
+        self.components = None
+        self.mean = None
+
+    def fit(self, X):
+        # Convert to float32 for speed
+        X = np.asarray(X, dtype=np.float32)
+
+        # Mean center
+        self.mean = np.mean(X, axis=0)
+        X_centered = X - self.mean
+
+        # SVD decomposition (fastest for PCA)
+        # X = U * S * Vt  --> principal axes = Vt[:n_components]
+        _, _, Vt = np.linalg.svd(X_centered, full_matrices=False)
+
+        # Keep only top components
+        self.components = Vt[:self.n_components]
+
+    def transform(self, X):
+        X = np.asarray(X, dtype=np.float32)
+        X_centered = X - self.mean
+        return np.dot(X_centered, self.components.T)
+
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(X)
+
+
+class KNNClassifier:
+    def __init__(self, k=5):
+        self.k = k
+        self.X = None
+        self.y = None
+
+    def fit(self, X, y):
+        self.X = np.asarray(X, dtype=np.float32)
+        self.y = np.asarray(y, dtype=np.int32)
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float32)
+        n_samples = X.shape[0]
+        predictions = np.empty(n_samples, dtype=np.int32)
+
+        for i in range(n_samples):
+            # squared Euclidean distances (no sqrt needed for nearest)
+            dists = np.sum((self.X - X[i]) ** 2, axis=1)
+
+            # get indices of k smallest distances (faster than argsort)
+            k_idx = np.argpartition(dists, self.k)[:self.k]
+
+            # take votes from neighbors
+            nearest_labels = self.y[k_idx]
+
+            # majority vote
+            neighbor_dists = np.sqrt(dists[k_idx])
+            weights = 1.0 / (neighbor_dists + 1e-6)
+
+            vote = Counter()
+            for lbl, w in zip(nearest_labels, weights):
+                vote[lbl] += w
+
+            predictions[i] = max(vote.items(), key=lambda x: x[1])[0]
+
+
+        return predictions
 class treeNode:
     def __init__(self, threshold=None, feature_index=None, value=None):
         self.threshold = threshold
@@ -147,106 +216,104 @@ class XGBoostClassifier:
         return y_pred 
 
 class ovr_variant:
-    def __init__(self,n_estimators = 80,lamda = 3,learning_rate=0.3,max_depth=6,subsample_features=1/28):
+    def __init__(self,n_estimators = 40,lamda = 3,learning_rate=0.3,max_depth=6,subsample_features=1/28,knn_k=5):
         self.ovr_models = []
         self.n_estimators = n_estimators
         self.lamda = lamda
         self.learning_rate = learning_rate
         self.max_depth = max_depth
         self.subsample_features = subsample_features
-        self.epsilon = None
+        self.knn_k = knn_k
         self.train = None
         self.target = None
-    def fit(self,X,y):
+        self.epsilon = None
+
+    def fit(self, X, y):
         self.train = X
         self.target = y
+
         classes = np.unique(y)
         for c in classes:
             print(f"Training class {c} vs Rest")
             y_binary = (y == c).astype(int)
-            model = XGBoostClassifier(n_estimators=self.n_estimators,
-                                      lamda=self.lamda,learning_rate=self.learning_rate,
-                                      max_depth=self.max_depth,subsample_features=self.subsample_features)
-            model.fit(X,y_binary)
+            model = XGBoostClassifier(
+                n_estimators=self.n_estimators,
+                lamda=self.lamda,
+                learning_rate=self.learning_rate,
+                max_depth=self.max_depth,
+                subsample_features=self.subsample_features
+            )
+            model.fit(X, y_binary)
             self.ovr_models.append(model)
-    def predict(self,X,epsilon=0.3):
+
+        # -------- GLOBAL PCA FOR OPTIMIZED REFINEMENT --------
+        print("Precomputing PCA for refinement...")
+        self.pca_global = PCA(n_components=60)   # or 50 or 80 tuned
+        self.train_pca = self.pca_global.fit_transform(X)
+
+        print("Fit complete.")
+
+    def predict(self, X, epsilon=0.25):
         self.epsilon = epsilon
         n_samples = X.shape[0]
-        n_classes = len(self.ovr_models)
-        scores = np.zeros((n_samples,n_classes))
+        scores = np.zeros((n_samples,len(self.ovr_models)))
+
         for idx,model in enumerate(self.ovr_models):
-            probs = model.predict(X)
-            scores[:,idx] = probs
+            scores[:,idx] = model.predict(X)
 
-        predictions =self.refine_knn_ovr_fast(scores,X,self.train,self.target,k=5,epsilon=self.epsilon)
-        return predictions
+        refined = self.refine_knn_ovr_fast(scores, X, self.train, self.target, k=self.knn_k, epsilon=self.epsilon)
+        return refined
 
 
-    def refine_knn_ovr_fast(self,probs,x_val,x_train, y_train, k=5, epsilon=0.1):
-        
-        prob_val = probs  
+    def refine_knn_ovr_fast(self, probs, x_val, x_train, y_train, k=5, epsilon=0.25):
+        prob_val = probs
+        N, C = prob_val.shape
 
         x_val = np.asarray(x_val, dtype=float)
-        x_train = np.asarray(x_train, dtype=float)
         y_train = np.asarray(y_train)
-
-        N, C = prob_val.shape
 
         final_preds = np.empty(N, dtype=y_train.dtype)
         epsilon_dist = 1e-6
 
         max_prob = np.max(prob_val, axis=1, keepdims=True)
-
         candidate_mask_all = (max_prob - prob_val) <= epsilon
-        
+
         candidate_counts = np.sum(candidate_mask_all, axis=1)
-
         no_refine_mask = candidate_counts == 1
-        
         refine_mask = candidate_counts > 1
-        
-        final_preds[no_refine_mask] = np.argmax(candidate_mask_all[no_refine_mask], axis=1)
-        
-        x_val_refine = x_val[refine_mask]
-        prob_val_refine = prob_val[refine_mask]
-        indices_refine = np.where(refine_mask)[0]
 
-        for j, (x_val_i, p_i) in enumerate(zip(x_val_refine, prob_val_refine)):
-            
-            candidates = np.where(candidate_mask_all[indices_refine[j]])[0]
+        final_preds[no_refine_mask] = np.argmax(candidate_mask_all[no_refine_mask], axis=1)
+
+        # ---- Only PCA transform once for val ----
+        x_val_pca = self.pca_global.transform(x_val)
+
+        idx_refine = np.where(refine_mask)[0]
+
+        for idx in idx_refine:
+            p_i = prob_val[idx]
+            candidates = np.where(candidate_mask_all[idx])[0]
 
             mask_sub = np.isin(y_train, candidates)
-            X_sub = x_train[mask_sub]
+            X_sub_pca = self.train_pca[mask_sub]
             y_sub = y_train[mask_sub]
-            
-            if X_sub.shape[0] == 0:
 
-                final_preds[indices_refine[j]] = np.argmax(p_i)
+            if X_sub_pca.shape[0] == 0:
+                final_preds[idx] = np.argmax(p_i)
                 continue
 
-            dists_sq = np.sum((X_sub - x_val_i)**2, axis=1)
-            
+            dists_sq = np.sum((X_sub_pca - x_val_pca[idx])**2, axis=1)
+
             k_eff = min(k, len(dists_sq))
+            k_idx = np.argpartition(dists_sq, k_eff)[:k_eff]
 
-            k_indices = np.argpartition(dists_sq, k_eff)[:k_eff]
-    
-            neighbor_dists_sq = dists_sq[k_indices]
-            neighbor_labels = y_sub[k_indices]
-            
-            neighbor_dists = np.sqrt(neighbor_dists_sq)
-            
+            neighbor_dists = np.sqrt(dists_sq[k_idx])
+            neighbor_labels = y_sub[k_idx]
             weights = 1.0 / (neighbor_dists + epsilon_dist)
-            
-            vote = Counter()
-            for label, weight in zip(neighbor_labels, weights):
-                vote[label] += weight
-                
-            if vote:
-                best_label = max(vote.items(), key=lambda x: x[1])[0]
-            else:
 
-                best_label = np.argmax(p_i)
-                
-            final_preds[indices_refine[j]] = best_label
+            vote = {}
+            for lbl, w in zip(neighbor_labels, weights):
+                vote[lbl] = vote.get(lbl,0)+w
+
+            final_preds[idx] = max(vote.items(), key=lambda x: x[1])[0]
 
         return final_preds
