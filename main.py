@@ -6,7 +6,7 @@ import pandas as pd
 def load_mnist_csv(file_path):
     data = pd.read_csv(file_path)
     y_train = data['label']
-    x_train = data.drop(columns=['label','even'])
+    x_train = data.drop(columns=[col for col in ['label','even'] if col in data.columns])
     x_train = x_train.values / 255.0  # Normalize pixel values
     return x_train, y_train
 def f1_score_macro(y_true, y_pred):
@@ -54,5 +54,6 @@ if __name__ == "__main__":
 
     print(f"\nFinal Macro F1 Score: {f1:.4f}")
     print(f"Total Runtime: {time.time() - start_time:.2f} seconds")
+
 
 
