@@ -31,13 +31,30 @@ and validation is performed through this final model.
 
 ## 📁 Repository Structure
 
-* Describe your repository structure here. Explain about overall code organization.
+
+### Summary of Code Organization
+- **Model Logic** is fully implemented in `Hybrid_algorithm.py` with no external ML libraries.
+- **Only `ovr_variant` should be used**—it encapsulates boosting, PCA, and KNN refinement in one model.
+- **Running `main.py`** trains and evaluates the hybrid model from the command line.
+- **endsem_Report** provides detailed explanation of methodology and results.
+
+
 
 ---
 
 ## 📦 Installation & Dependencies
 
-* Mention all the related instructions for installation of related packages for running your code here.
+### Requirements
+To run this project, you need the following installed on your system:
+- Python 3.8 or above
+- pip (Python package manager)
+- numpy
+- pandas
+- counter from collections
+
+### Python Dependencies
+The project does not use external ML libraries such as sklearn, TensorFlow, or PyTorch.
+Only basic scientific computing packages are required: pip install numpy pandas matplotlib
 
 ---
 
@@ -46,28 +63,19 @@ and validation is performed through this final model.
 All experiments should be runnable from the command line **and** reproducible in the notebook.
 
 ### A. Command-line (recommended for grading)
-
+- python main.py 
 * Mention the instructions to run you .py files.
-  
-### Requirements
-- Python 3.8+
-- numpy
-- pandas
-- matplotlib (optional, for generating plots)
-- counter from collections 
 
-### Dataset
 Place the following CSV files in the same directory as main.py:
 - MNIST_train.csv
 - MNIST_validation.csv
 
-## You can further add your own sections/titles along with corresponding contents here:
 
 ---
 
 ## 🧾 Authors
 
-**<Name, Roll No.>**, IIT Madras (2025–26)
+**Aakash,DA24B028**, IIT Madras (2025–26)
 
 
 ## Best Practices:
