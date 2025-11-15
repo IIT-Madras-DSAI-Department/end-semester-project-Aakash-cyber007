@@ -6,10 +6,7 @@
 This repository is the **starter** for your End Semester Project submission in GitHub Classroom. You can implement your solution and push your work in this repository. Please free to edit this README.md file as per your requirements.
 
 > **Scope (as per assignment brief):**
-> Give an introduction to your repository here: Eg. This repository contains a complete implementation for ...
-
-## Repository Overview
-
+> Give an introduction to your repository here: Eg. 
 This repository contains the final implementation of the Hybrid OvR classification system
 developed for the Machine Learning End Semester Project. The goal was to build a multi-class
 classifier for handwritten digits (MNIST) **without using external ML libraries such as sklearn,
