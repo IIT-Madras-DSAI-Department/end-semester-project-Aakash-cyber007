@@ -248,7 +248,7 @@ class ovr_variant:
 
         # -------- GLOBAL PCA FOR OPTIMIZED REFINEMENT --------
         print("Precomputing PCA for refinement...")
-        self.pca_global = PCA(n_components=60)   # or 50 or 80 tuned
+        self.pca_global = PCA(n_components=100)   # or 50 or 80 tuned
         self.train_pca = self.pca_global.fit_transform(X)
 
         print("Fit complete.")
@@ -317,3 +317,4 @@ class ovr_variant:
             final_preds[idx] = max(vote.items(), key=lambda x: x[1])[0]
 
         return final_preds
+
