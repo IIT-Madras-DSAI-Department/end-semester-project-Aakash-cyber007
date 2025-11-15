@@ -3,7 +3,12 @@ import time
 from Hybrid_algorithm import ovr_variant  # import your model
 import pandas as pd
 
-
+def load_mnist_csv(file_path):
+    data = pd.read_csv(file_path)
+    y_train = data['label']
+    x_train = data.drop(columns=['label','even'])
+    x_train = x_train.values / 255.0  # Normalize pixel values
+    return x_train, y_train
 def f1_score_macro(y_true, y_pred):
     classes = np.unique(y_true)
     f1_scores = []
@@ -21,18 +26,12 @@ def f1_score_macro(y_true, y_pred):
     return np.mean(f1_scores)
 
 
-# -------- MAIN PIPELINE -------- #
-
 if __name__ == "__main__":
     start_time = time.time()
 
     print("Loading MNIST dataset...")
-    train_data = pd.read_csv("MNIST_train.csv")
-    val_data   = pd.read_csv("MNIST_validation.csv")
-    y_train = train_data['label']
-    x_train = train_data.drop(columns=['label','even'])
-    y_val   = val_data['label']
-    x_val   = val_data.drop(columns=['label','even'])
+    x_train, y_train= load_mnist_csv("MNIST_train.csv")
+    x_val, y_val = load_mnist_csv("MNIST_validation.csv")
 
 
     print("Training Hybrid OvR Model...")
@@ -55,4 +54,5 @@ if __name__ == "__main__":
 
     print(f"\nFinal Macro F1 Score: {f1:.4f}")
     print(f"Total Runtime: {time.time() - start_time:.2f} seconds")
+
 
