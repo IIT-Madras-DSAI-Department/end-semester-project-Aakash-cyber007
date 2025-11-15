@@ -8,7 +8,24 @@ This repository is the **starter** for your End Semester Project submission in G
 > **Scope (as per assignment brief):**
 > Give an introduction to your repository here: Eg. This repository contains a complete implementation for ...
 
----
+## Repository Overview
+
+This repository contains the final implementation of the Hybrid OvR classification system
+developed for the Machine Learning End Semester Project. The goal was to build a multi-class
+classifier for handwritten digits (MNIST) **without using external ML libraries such as sklearn,
+TensorFlow, or PyTorch**, and implement the core logic fully from scratch using NumPy.
+
+The solution uses a **single unified model: `ovr_variant`**, which integrates:
+- One-vs-Rest Gradient Boosting (implemented manually)
+- Epsilon-triggered KNN refinement for ambiguous predictions
+- PCA dimensionality reduction applied globally for speed and noise reduction
+
+This hybrid design significantly improves robustness and reduces misclassification among visually
+similar digits (e.g., 4 vs 9), outperforming the baseline pure OvR model.
+
+Only the `ovr_variant` model is required and used in this project — all training, prediction,
+and validation is performed through this final model.
+
 
 **Important Note:** 
 1. TAs will evaluate using the `.py` file only.
