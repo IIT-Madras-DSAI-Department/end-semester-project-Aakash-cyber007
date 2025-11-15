@@ -70,6 +70,10 @@ Place the following CSV files in the same directory as main.py:
 - MNIST_train.csv
 - MNIST_validation.csv
 
+Output :
+- Training Progress will be shown
+- prints accuracy score (95.5 - 96.02) and f1 score(95.5 - 96.02)
+- Due to the stochastic nature of boosting and data ordering, accuracy fluctuates slightly between runs.
 
 ---
 
